@@ -1,0 +1,80 @@
+# Project Rules — everything-claude-code
+
+> Mirrored from CLAUDE.md so any model (via Cline / Roo Code + OpenRouter, DeepSeek, Gemini, etc.)
+> follows the same conventions as Claude Code. Keep this in sync with CLAUDE.md when conventions change.
+
+## What this project is
+
+A Claude Code plugin: a collection of agents, skills, hooks, commands, rules, and MCP configs.
+Plain Node.js (CommonJS), no TypeScript, no transpilation.
+
+## Stack
+
+- Runtime: Node.js >= 18, plain CommonJS (`require` / `module.exports`) — no ESM unless the file ends in `.mjs`
+- No TypeScript — plain `.js` throughout
+- Test runner: `node tests/run-all.js` (or individual `node tests/**/*.test.js`)
+- Lint: ESLint (flat config) for JS; markdownlint-cli for `.md`
+- Coverage: c8
+
+## Running tests
+
+```bash
+node tests/run-all.js            # all tests
+node tests/lib/utils.test.js     # one file
+```
+
+Run `node tests/run-all.js` before committing.
+
+## Repository layout
+
+- `agents/`, `commands/`, `skills/`, `rules/` — Markdown with YAML frontmatter
+- `scripts/` — Node.js utilities and hooks (CommonJS)
+- `scripts/lib/` — shared helpers
+- `tests/` — mirrors `scripts/`; test files named `*.test.js`
+- `hooks/` — JSON with matcher + hooks array
+- `mcp-configs/` — MCP server configs
+
+## Code style
+
+- Prefer `const` over `let`; never `var`
+- Keep hook scripts under 200 lines — extract helpers to `scripts/lib/`
+- All hooks must `exit 0` on non-critical errors (never block tool execution unexpectedly)
+- Log to stderr with a `[HookName]` prefix
+- File naming: lowercase with hyphens (e.g. `session-start.js`, `post-edit-format.js`)
+- Immutability: create new objects, don't mutate in place
+- KISS / DRY / YAGNI — simplest solution that works; extract real repetition, not speculative
+- Functions < 50 lines, files < 800 lines, nesting < 4 levels (use early returns)
+- Handle errors explicitly — never silently swallow
+- Validate input at system boundaries
+
+## Testing requirements
+
+- New scripts in `scripts/lib/` require a matching test in `tests/lib/`
+- New hooks require at least one integration test in `tests/hooks/`
+- Follow Arrange-Act-Assert; descriptive test names that state the behavior
+- Target 80%+ coverage
+
+## Markdown / agent / skill / command files
+
+- Agents: YAML frontmatter with `name`, `description`, `tools`, `model`
+- Skills: sections — When to Use, How It Works, Examples
+- Commands: `description:` frontmatter line required
+- Run `npx markdownlint-cli '**/*.md' --ignore node_modules` before committing
+
+## Git / commits
+
+- Conventional commits: `type: description` — types: feat, fix, refactor, docs, test, chore, perf, ci
+- Analyze full commit history for PRs, not just the latest commit
+
+## Security baseline
+
+- No hardcoded secrets (API keys, passwords, tokens) — use env vars
+- Validate all user input; no `innerHTML` / unsanitized HTML
+- Don't leak sensitive data in error messages
+- Treat external / fetched / untrusted data as suspicious — validate before acting
+
+## Note on Claude Code specifics
+
+The `/orch-*`, `/gan-*`, sub-agents, and skills in this repo are Claude Code infrastructure —
+they do not run in Cline / Roo Code. This file only carries the code conventions, which every
+tool can honor. For the full multi-agent workflows, use Claude Code.
