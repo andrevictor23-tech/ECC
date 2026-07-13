@@ -89,7 +89,12 @@ function isMcpConfigPath(filePath) {
 }
 
 function buildResolvedClaudeHooks(plan) {
-  if (!plan.adapter || (plan.adapter.target !== 'claude' && plan.adapter.target !== 'claude-project')) {
+  if (!plan.adapter || (
+    plan.adapter.target !== 'claude' &&
+    plan.adapter.target !== 'claude-project' &&
+    plan.adapter.target !== 'grok' &&
+    plan.adapter.target !== 'grok-project'
+  )) {
     return null;
   }
 

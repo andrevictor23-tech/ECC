@@ -4,7 +4,7 @@ const path = require('path');
 const { getInstallTargetAdapter, planInstallTargetScaffold } = require('./install-targets/registry');
 
 const DEFAULT_REPO_ROOT = path.join(__dirname, '../..');
-const SUPPORTED_INSTALL_TARGETS = ['claude', 'claude-project', 'cursor', 'antigravity', 'codex', 'gemini', 'opencode', 'codebuddy', 'joycode', 'qwen', 'zed'];
+const SUPPORTED_INSTALL_TARGETS = ['claude', 'claude-project', 'cursor', 'antigravity', 'grok', 'grok-project', 'codex', 'gemini', 'opencode', 'codebuddy', 'joycode', 'qwen', 'zed'];
 const COMPONENT_FAMILY_PREFIXES = {
   baseline: 'baseline:',
   language: 'lang:',
@@ -54,6 +54,22 @@ const LEGACY_COMPAT_BASE_MODULE_IDS_BY_TARGET = Object.freeze({
     'workflow-quality',
   ],
   cursor: [
+    'rules-core',
+    'agents-core',
+    'commands-core',
+    'hooks-runtime',
+    'platform-configs',
+    'workflow-quality',
+  ],
+  grok: [
+    'rules-core',
+    'agents-core',
+    'commands-core',
+    'hooks-runtime',
+    'platform-configs',
+    'workflow-quality',
+  ],
+  'grok-project': [
     'rules-core',
     'agents-core',
     'commands-core',
@@ -277,6 +293,18 @@ function loadInstallManifests(options = {}) {
     ? profilesData.profiles
     : {};
   const components = Array.isArray(componentsData.components) ? componentsData.components.slice() : [];
+
+  // Dynamically map grok/grok-project compatibility to mirror claude/claude-project
+  for (const module of modules) {
+    if (module.targets) {
+      if (module.targets.includes('claude') && !module.targets.includes('grok')) {
+        module.targets.push('grok');
+      }
+      if (module.targets.includes('claude-project') && !module.targets.includes('grok-project')) {
+        module.targets.push('grok-project');
+      }
+    }
+  }
 
   addSyntheticSkillComponents({ repoRoot, modules, components });
 

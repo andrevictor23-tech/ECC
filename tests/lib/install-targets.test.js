@@ -42,6 +42,8 @@ function runTests() {
     assert.ok(targets.includes('claude-project'), 'Should include claude-project target');
     assert.ok(targets.includes('cursor'), 'Should include cursor target');
     assert.ok(targets.includes('antigravity'), 'Should include antigravity target');
+    assert.ok(targets.includes('grok'), 'Should include grok target');
+    assert.ok(targets.includes('grok-project'), 'Should include grok-project target');
     assert.ok(targets.includes('codex'), 'Should include codex target');
     assert.ok(targets.includes('gemini'), 'Should include gemini target');
     assert.ok(targets.includes('opencode'), 'Should include opencode target');
@@ -104,6 +106,52 @@ function runTests() {
         && operation.destinationPath === path.join(homeDir, '.claude', 'skills', 'ecc', 'tdd-workflow')
       )),
       'Should install bundled Claude skills under skills/ecc'
+    );
+  })) passed++; else failed++;
+
+  if (test('resolves grok adapter root and install-state path from home dir', () => {
+    const adapter = getInstallTargetAdapter('grok');
+    const homeDir = '/Users/example';
+    const root = adapter.resolveRoot({ homeDir, repoRoot: '/repo/ecc' });
+    const statePath = adapter.getInstallStatePath({ homeDir, repoRoot: '/repo/ecc' });
+
+    assert.strictEqual(root, path.join(homeDir, '.grok'));
+    assert.strictEqual(statePath, path.join(homeDir, '.grok', 'ecc', 'install-state.json'));
+  })) passed++; else failed++;
+
+  if (test('plans grok rules and skills under ECC-managed subdirectories', () => {
+    const repoRoot = path.join(__dirname, '..', '..');
+    const homeDir = '/Users/example';
+
+    const plan = planInstallTargetScaffold({
+      target: 'grok',
+      repoRoot,
+      homeDir,
+      modules: [
+        {
+          id: 'rules-core',
+          paths: ['rules'],
+        },
+        {
+          id: 'workflow-quality',
+          paths: ['skills/tdd-workflow'],
+        },
+      ],
+    });
+
+    assert.ok(
+      plan.operations.some(operation => (
+        normalizedRelativePath(operation.sourceRelativePath) === 'rules'
+        && operation.destinationPath === path.join(homeDir, '.grok', 'rules', 'ecc')
+      )),
+      'Should install bundled Grok rules under rules/ecc'
+    );
+    assert.ok(
+      plan.operations.some(operation => (
+        normalizedRelativePath(operation.sourceRelativePath) === 'skills/tdd-workflow'
+        && operation.destinationPath === path.join(homeDir, '.grok', 'skills', 'ecc', 'tdd-workflow')
+      )),
+      'Should install bundled Grok skills under skills/ecc'
     );
   })) passed++; else failed++;
 
@@ -945,6 +993,106 @@ function runTests() {
         && operation.destinationPath === path.join(projectRoot, '.claude', 'rules', 'ecc')
       )),
       'Should still include non-foreign rules path (guards against empty-plan regression)'
+    );
+    assert.ok(
+      !plan.operations.some(operation => (
+        normalizedRelativePath(operation.sourceRelativePath) === '.cursor'
+        || normalizedRelativePath(operation.sourceRelativePath).startsWith('.cursor/')
+      )),
+      'Should skip foreign Cursor platform paths'
+    );
+    assert.ok(
+      !plan.operations.some(operation => (
+        normalizedRelativePath(operation.sourceRelativePath) === '.zed'
+        || normalizedRelativePath(operation.sourceRelativePath).startsWith('.zed/')
+      )),
+      'Should skip foreign Zed platform paths'
+    );
+  })) passed++; else failed++;
+
+  if (test('resolves grok-project adapter root and install-state path from project root', () => {
+    const adapter = getInstallTargetAdapter('grok-project');
+    const projectRoot = '/workspace/app';
+    const root = adapter.resolveRoot({ projectRoot });
+    const statePath = adapter.getInstallStatePath({ projectRoot });
+
+    assert.strictEqual(adapter.id, 'grok-project');
+    assert.strictEqual(adapter.target, 'grok-project');
+    assert.strictEqual(adapter.kind, 'project');
+    assert.strictEqual(root, path.join(projectRoot, '.grok'));
+    assert.strictEqual(statePath, path.join(projectRoot, '.grok', 'ecc', 'install-state.json'));
+  })) passed++; else failed++;
+
+  if (test('grok-project adapter supports lookup by target and adapter id', () => {
+    const byTarget = getInstallTargetAdapter('grok-project');
+    const byId = getInstallTargetAdapter('grok-project');
+
+    assert.strictEqual(byTarget.id, 'grok-project');
+    assert.strictEqual(byId.id, 'grok-project');
+    assert.ok(byTarget.supports('grok-project'));
+  })) passed++; else failed++;
+
+  if (test('plans grok-project rules and skills under project-scope ECC-managed subdirectories', () => {
+    const repoRoot = path.join(__dirname, '..', '..');
+    const projectRoot = '/workspace/app';
+
+    const plan = planInstallTargetScaffold({
+      target: 'grok-project',
+      repoRoot,
+      projectRoot,
+      modules: [
+        {
+          id: 'rules-core',
+          paths: ['rules'],
+        },
+        {
+          id: 'workflow-quality',
+          paths: ['skills/tdd-workflow'],
+        },
+      ],
+    });
+
+    assert.strictEqual(plan.adapter.id, 'grok-project');
+    assert.strictEqual(plan.targetRoot, path.join(projectRoot, '.grok'));
+    assert.strictEqual(plan.installStatePath, path.join(projectRoot, '.grok', 'ecc', 'install-state.json'));
+    assert.ok(
+      plan.operations.some(operation => (
+        normalizedRelativePath(operation.sourceRelativePath) === 'rules'
+        && operation.destinationPath === path.join(projectRoot, '.grok', 'rules', 'ecc')
+      )),
+      'Should install bundled rules under project-scope rules/ecc'
+    );
+    assert.ok(
+      plan.operations.some(operation => (
+        normalizedRelativePath(operation.sourceRelativePath) === 'skills/tdd-workflow'
+        && operation.destinationPath === path.join(projectRoot, '.grok', 'skills', 'ecc', 'tdd-workflow')
+      )),
+      'Should install bundled skills under project-scope skills/ecc'
+    );
+  })) passed++; else failed++;
+
+  if (test('grok-project skips foreign platform source paths', () => {
+    const repoRoot = path.join(__dirname, '..', '..');
+    const projectRoot = '/workspace/app';
+
+    const plan = planInstallTargetScaffold({
+      target: 'grok-project',
+      repoRoot,
+      projectRoot,
+      modules: [
+        {
+          id: 'platform-configs',
+          paths: ['.cursor', '.zed', 'rules'],
+        },
+      ],
+    });
+
+    assert.ok(
+      plan.operations.some(operation => (
+        normalizedRelativePath(operation.sourceRelativePath) === 'rules'
+        && operation.destinationPath === path.join(projectRoot, '.grok', 'rules', 'ecc')
+      )),
+      'Should still include non-foreign rules path'
     );
     assert.ok(
       !plan.operations.some(operation => (
